@@ -137,6 +137,55 @@ class EventController extends Controller
         return response()->json($event);
     }
 
-  
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Event  $event
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, Event $event)
+    {
+        $this->authorize('update', $event);
+        
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'start_date' => 'sometimes|required|date',
+            'end_date' => 'sometimes|required|date|after_or_equal:start_date',
+            'location' => 'sometimes|required|string|max:255',
+            'address' => 'nullable|string',
+            'capacity' => 'sometimes|required|integer|min:1',
+            'status' => 'sometimes|required|in:draft,published,cancelled,completed',
+            'categories' => 'nullable|array',
+            'categories.*' => 'exists:categories,id',
+            'featured_image' => 'nullable|image|max:5120', 
+            'is_featured' => 'boolean',
+        ]);
+
+      
+        if ($request->hasFile('featured_image')) {
+            // Delete old image if exists
+            if ($event->featured_image) {
+                Storage::disk('public')->delete($event->featured_image);
+            }
+            
+            $path = $request->file('featured_image')->store('event-images', 'public');
+            $validated['featured_image'] = $path;
+        }
+        
+        $event->update($validated);
+
+        if (isset($validated['categories'])) {
+            $event->categories()->sync($validated['categories']);
+        }
+        
+        return response()->json([
+            'message' => 'Event updated successfully',
+            'event' => $event->load('categories')
+        ]);
+    }
+
+   
 }
 
