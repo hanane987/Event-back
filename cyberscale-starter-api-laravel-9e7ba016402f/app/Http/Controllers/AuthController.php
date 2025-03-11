@@ -1,170 +1,164 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
-use App\Enums\ROLE;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Controllers\Controller;
 use App\Models\User;
-use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    public function me(Request $request)
+    /**
+     * 
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function register(Request $request)
     {
-        try {
-            $user = Auth::user();
-            if (! $user) {
-                return response()->json(['success' => false, 'errors' => [__('auth.user_not_found')]]);
-            }
-            $admin = $request->input('admin');
-            if ($admin && ! $user->hasRole(ROLE::ADMIN)) {
-                return response()->json(['success' => false, 'errors' => [__('auth.not_admin')]]);
-            }
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:20',
+        ]);
 
-            return response()->json(
-                [
-                    'success' => true,
-                    'data' => [
-                        'user' => $user,
-                    ],
-                ]
-            );
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.me: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'role' => 'attendee', 
+        ]);
 
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
+        
+        if (config('auth.email_verification_enabled', false)) {
+            $user->sendEmailVerificationNotification();
         }
+
+        Auth::login($user);
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'user' => $user
+        ], 201);
+        
+    } 
+ /**
+     * Login a user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+            'remember' => 'boolean',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+        $remember = $request->remember ?? false;
+
+        if (Auth::attempt($credentials, $remember)) {
+            $request->session()->regenerate();
+            
+            return response()->json([
+                'message' => 'Login successful',
+                'user' => Auth::user()
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'The provided credentials do not match our records.',
+        ], 401);
     }
 
-    public function login(LoginRequest $request)
+  /**
+     * Logout the current user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function logout(Request $request)
     {
-        try {
-            $user = User::where('email', $request->input('email'))->first();
+        Auth::logout();
 
-            if (! $user || ! Hash::check($request->input('password'), $user->password)) {
-                return response()->json(['success' => false, 'errors' => [__('auth.failed')]]);
-            }
-            $admin = $request->input('admin');
-            if ($admin && ! $user->hasRole(ROLE::ADMIN)) {
-                return response()->json(['success' => false, 'errors' => [__('auth.not_admin')]]);
-            }
-            $token = $user->createToken('authToken', ['expires_in' => 60 * 24 * 30])->plainTextToken;
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-            return response()->json(['success' => true, 'message' => __('auth.login_success'), 'data' => ['token' => $token]]);
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.login: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
-
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        }
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ]);
     }
 
-    public function register(RegisterRequest $request)
+    
+    /**
+     *
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function forgotPassword(Request $request)
     {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
 
-        try {
-            return DB::transaction(
-                function () use ($request) {
-                    $user = User::where('email', $request->email)->first();
-                    if ($user) {
-                        return response()->json(['success' => false, 'errors' => [__('auth.email_already_exists')]]);
-                    }
-                    $user = User::create(
-                        [
-                            'email' => $request->email,
-                            'password' => Hash::make($request->password),
-                        ]
-                    );
-                    $user->assignRole(ROLE::USER);
-                    $token = $user->createToken('authToken', ['expires_in' => 60 * 24 * 30])->plainTextToken;
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
 
-                    return response()->json(['success' => true, 'data' => ['token' => $token], 'message' => __('auth.register_success')]);
-                }
-            );
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.register: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
-
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        }
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['message' => __($status)])
+            : response()->json(['message' => __($status)], 400);
     }
 
-    public function logout()
-    {
-        try {
-            $user = Auth::user();
-            $user->tokens()->delete();
-
-            return response()->json(['success' => true, 'message' => __('auth.logout_success')]);
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.logout: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
-
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        }
-    }
-
-    public function requestPasswordReset(Request $request)
-    {
-        try {
-            $email = $request->email;
-            $status = Password::sendResetLink(['email' => $email]);
-            if ($status === Password::RESET_LINK_SENT) {
-                return response()->json(['success' => true, 'message' => __('auth.password_reset_link_sent')]);
-            } elseif ($status === Password::INVALID_USER) {
-                return response()->json(['success' => false, 'errors' => [__('users.not_found')]]);
-            } elseif ($status === Password::INVALID_TOKEN) {
-                return response()->json(['success' => false, 'errors' => [__('auth.invalid_token')]]);
-            } elseif ($status === Password::RESET_THROTTLED) {
-                return response()->json(['success' => false, 'errors' => [__('auth.reset_throttled')]]);
-            }
-
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.requestPasswordReset: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
-
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        }
-    }
-
+     /**
+     * 
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
     public function resetPassword(Request $request)
     {
-        try {
-            return DB::transaction(
-                function () use ($request) {
-                    $status = Password::reset(
-                        $request->only('email', 'password', 'password_confirmation', 'token'),
-                        function ($user, $password) {
-                            $user->password = Hash::make($password);
-                            $user->save();
-                        }
-                    );
-                    if ($status === Password::PASSWORD_RESET) {
-                        return response()->json(['success' => true, 'message' => __('auth.password_reset_success')]);
-                    } elseif ($status === Password::INVALID_USER) {
-                        return response()->json(['success' => false, 'errors' => [__('users.not_found')]]);
-                    } elseif ($status === Password::INVALID_TOKEN) {
-                        return response()->json(['success' => false, 'errors' => [__('auth.invalid_token')]]);
-                    } elseif ($status === Password::RESET_THROTTLED) {
-                        return response()->json(['success' => false, 'errors' => [__('auth.reset_throttled')]]);
-                    }
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
 
-                    return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-                }
-            );
-        } catch (\Exception $e) {
-            Log::error('Error caught in function AuthController.resetPassword: '.$e->getMessage());
-            Log::error($e->getTraceAsString());
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
 
-            return response()->json(['success' => false, 'errors' => [__('common.unexpected_error')]]);
-        }
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? response()->json(['message' => __($status)])
+            : response()->json(['message' => __($status)], 400);
+    }
+     /**
+     * 
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function user(Request $request)
+    {
+        return response()->json($request->user());
     }
 }

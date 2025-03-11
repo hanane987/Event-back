@@ -27,7 +27,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
         ]);
-
+    
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -35,20 +35,12 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'role' => 'attendee', 
         ]);
-
-        
-        if (config('auth.email_verification_enabled', false)) {
-            $user->sendEmailVerificationNotification();
-        }
-
-        Auth::login($user);
-
+    
         return response()->json([
             'message' => 'User registered successfully',
             'user' => $user
         ], 201);
-        
-    } 
+    }
  /**
      * Login a user.
      *
