@@ -74,4 +74,34 @@ class Event extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Get the total number of bookings for the event.
+     */
+    public function getTotalBookingsAttribute()
+    {
+        return $this->bookings()->sum('quantity');
+    }
+
+    /**
+     * Check if the event is at capacity.
+     */
+    public function isAtCapacity()
+    {
+        return $this->getTotalBookingsAttribute() >= $this->capacity;
+    }
+ /**
+     * Get the remaining capacity for the event.
+     */
+    public function getRemainingCapacityAttribute()
+    {
+        return max(0, $this->capacity - $this->getTotalBookingsAttribute());
+    }
+
+    /**
+     * Scope a query to only include published events.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
 }
