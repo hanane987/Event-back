@@ -113,4 +113,20 @@ class UserController extends Controller
             'user' => $user
         ]);
     }
+      /**
+     * 
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(User $user)
+    {
+        $this->authorize('delete', $user);
+        
+        $user->delete();
+        
+        return response()->json([
+            'message' => 'User deleted successfully'
+        ]);
+    }
 }
