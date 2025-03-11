@@ -80,6 +80,22 @@ class AuthController extends Controller
         ], 401);
     }
 
+  /**
+     * Logout the current user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function logout(Request $request)
+    {
+        Auth::logout();
 
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ]);
+    }
 
 }
