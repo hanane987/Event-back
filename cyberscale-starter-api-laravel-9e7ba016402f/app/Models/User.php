@@ -54,5 +54,14 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    /**
+     * 
+     */
+    public function createdEvents()
+    {
+        return $this->hasMany(Event::class, 'creator_id');
+    }
+
+   
 }
 
