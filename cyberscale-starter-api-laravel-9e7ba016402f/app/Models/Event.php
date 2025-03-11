@@ -104,4 +104,19 @@ class Event extends Model
     {
         return $query->where('status', 'published');
     }
+      /**
+     * Scope a query to only include featured events.
+     */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    /**
+     * Scope a query to only include upcoming events.
+     */
+    public function scopeUpcoming($query)
+    {
+        return $query->where('start_date', '>', now());
+    }
 }
