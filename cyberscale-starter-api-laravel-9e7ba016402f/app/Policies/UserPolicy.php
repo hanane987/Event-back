@@ -40,4 +40,30 @@ class UserPolicy
     {
         return $user->isAdmin();
     }
+
+     /**
+     *
+     *
+     * @param  \App\Models\User  $user
+     * @param  \App\Models\User  $model
+     * @return \Illuminate\Auth\Access\Response|bool
+     */
+    public function update(User $user, User $model)
+    {
+        // Admin can update any user, users can update themselves
+        return $user->isAdmin() || $user->id === $model->id;
+    }
+
+    /**
+     *
+     *
+     * @param  \App\Models\User  $user
+     * @param  \App\Models\User  $model
+     * @return \Illuminate\Auth\Access\Response|bool
+     */
+    public function delete(User $user, User $model)
+    {
+        // Only admin can delete users, and they cannot delete themselves
+        return $user->isAdmin() && $user->id !== $model->id;
+    }
 }
