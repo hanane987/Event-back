@@ -2,43 +2,35 @@
 
 namespace Database\Seeders;
 
-use App\Enums\ROLE;
-use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;  
+use App\Models\User;
 
 class UserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     *
-     * @return void
      */
-    public function run()
+    public function run(): void
     {
+        // Create an admin user
+        User::create([
+            'name' => 'Admin User',  
+            'email' => 'admin@cysc.fr',  
+            'password' => Hash::make('password'),  
+            'role' => 'admin',  
+            'profile_image' => null,  
+            'phone' => '1234567890',  
+        ]);
 
-        if (env('APP_ENV') === 'prod') {
-            $admin = User::firstOrCreate(
-                ['email' => 'admin@cysc.fr'],
-                ['password' => bcrypt('fnFPB3TzGWTBoLA')],
-            );
-            $admin->assignRole(ROLE::ADMIN);
-
-            $user = User::firstOrCreate(
-                ['email' => 'user@cysc.fr'],
-                ['password' => bcrypt('nRapnRYRdxcE')],
-            );
-            $user->assignRole(ROLE::USER);
-        } else {
-            $admin = User::firstOrCreate(
-                ['email' => 'admin@cysc.fr'],
-                ['password' => bcrypt('admin')],
-            );
-            $admin->assignRole(ROLE::ADMIN);
-            $user = User::firstOrCreate(
-                ['email' => 'user@cysc.fr'],
-                ['password' => bcrypt('user')],
-            );
-            $user->assignRole(ROLE::USER);
-        }
+        // Create an attendee user (for testing)
+        User::create([
+            'name' => 'Attendee User',
+            'email' => 'attendee@cysc.fr',
+            'password' => Hash::make('password'),
+            'role' => 'attendee',
+            'profile_image' => null,
+            'phone' => '0987654321',
+        ]);
     }
 }
