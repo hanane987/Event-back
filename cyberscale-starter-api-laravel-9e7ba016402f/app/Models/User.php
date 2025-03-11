@@ -63,13 +63,21 @@ class User extends Authenticatable
     }
 
     /**
-     *
+     * 
      */
     public function bookings()
     {
         return $this->hasMany(Booking::class);
     }
 
-    
+    /**
+     * 
+     */
+    public function bookedEvents()
+    {
+        return $this->belongsToMany(Event::class, 'bookings')
+            ->withPivot('ticket_id', 'quantity', 'total_price', 'qr_code', 'status')
+            ->withTimestamps();
+    }
 }
 
