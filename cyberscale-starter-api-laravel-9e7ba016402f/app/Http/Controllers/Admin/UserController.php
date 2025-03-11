@@ -57,5 +57,16 @@ class UserController extends Controller
             'user' => $user
         ], 201);
     }
-
+ /**
+     *
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\Http\Response
+     */
+    public function show(User $user)
+    {
+        $this->authorize('view', $user);
+        
+        return response()->json($user);
+    }
 }
