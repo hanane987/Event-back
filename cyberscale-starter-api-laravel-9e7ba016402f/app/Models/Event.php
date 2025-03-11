@@ -30,5 +30,16 @@ class Event extends Model
         'is_featured',
     ];
 
-   
+     /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'is_featured' => 'boolean',
+        'category' => 'string', 
+    ];
+
 }
