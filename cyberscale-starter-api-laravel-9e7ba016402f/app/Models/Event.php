@@ -56,6 +56,22 @@ class Event extends Model
     {
         return $this->hasMany(Ticket::class);
     }
+ /**
+     * Get the bookings for the event.
+     */
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 
+    /**
+     * Get the attendees for the event.
+     */
+    public function attendees()
+    {
+        return $this->belongsToMany(User::class, 'bookings')
+            ->withPivot('ticket_id', 'quantity', 'total_price', 'qr_code', 'status')
+            ->withTimestamps();
+    }
 
 }
