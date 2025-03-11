@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * 
+     * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
@@ -23,6 +23,16 @@ class User extends Authenticatable
         'role', // 'admin' or 'attendee'
         'profile_image',
         'phone',
+    ];
+
+    /**
+     * 
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
   
