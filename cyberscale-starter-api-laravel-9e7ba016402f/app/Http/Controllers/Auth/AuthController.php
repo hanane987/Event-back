@@ -151,4 +151,14 @@ class AuthController extends Controller
             ? response()->json(['message' => __($status)])
             : response()->json(['message' => __($status)], 400);
     }
+     /**
+     * 
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function user(Request $request)
+    {
+        return response()->json($request->user());
+    }
 }
