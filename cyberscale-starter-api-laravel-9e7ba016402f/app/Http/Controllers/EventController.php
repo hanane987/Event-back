@@ -77,6 +77,53 @@ class EventController extends Controller
         return response()->json($events);
     }
 
- 
+    /**
+     * S.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        $this->authorize('create', Event::class);
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'location' => 'required|string|max:255',
+            'address' => 'nullable|string',
+            'capacity' => 'required|integer|min:1',
+            'status' => 'required|in:draft,published',
+            'categories' => 'nullable|array',
+            'categories.*' => 'exists:categories,id',
+            'featured_image' => 'nullable|image|max:5120', 
+            'is_featured' => 'boolean',
+        ]);
+
+        // Handle featured image upload
+        if ($request->hasFile('featured_image')) {
+            $path = $request->file('featured_image')->store('event-images', 'public');
+            $validated['featured_image'] = $path;
+        }
+
+        // Set creator_id to current user
+        $validated['creator_id'] = Auth::id();
+        
+        $event = Event::create($validated);
+
+        // Attach categories if provided
+        if (isset($validated['categories'])) {
+            $event->categories()->attach($validated['categories']);
+        }
+        
+        return response()->json([
+            'message' => 'Event created successfully',
+            'event' => $event->load('categories')
+        ], 201);
+    }
+
+   
 }
 
