@@ -176,6 +176,7 @@ class EventController extends Controller
         
         $event->update($validated);
 
+
         if (isset($validated['categories'])) {
             $event->categories()->sync($validated['categories']);
         }
@@ -185,7 +186,27 @@ class EventController extends Controller
             'event' => $event->load('categories')
         ]);
     }
-
+ /**
+     * Remove the specified resource from storage.
+     *
+     * @param  \App\Models\Event  $event
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Event $event)
+    {
+        $this->authorize('delete', $event);
+        
+        
+        if ($event->featured_image) {
+            Storage::disk('public')->delete($event->featured_image);
+        }
+        
+        $event->delete();
+        
+        return response()->json([
+            'message' => 'Event deleted successfully'
+        ]);
+    }
    
 }
 
