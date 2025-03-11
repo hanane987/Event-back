@@ -78,7 +78,7 @@ class EventController extends Controller
     }
 
     /**
-     * S.
+     * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
@@ -98,7 +98,7 @@ class EventController extends Controller
             'status' => 'required|in:draft,published',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
-            'featured_image' => 'nullable|image|max:5120', 
+            'featured_image' => 'nullable|image|max:5120', // 5MB max
             'is_featured' => 'boolean',
         ]);
 
@@ -124,6 +124,19 @@ class EventController extends Controller
         ], 201);
     }
 
-   
+    /**
+     * Display the specified resource.
+     *
+     * @param  \App\Models\Event  $event
+     * @return \Illuminate\Http\Response
+     */
+    public function show(Event $event)
+    {
+        $event->load(['categories', 'creator', 'tickets']);
+        
+        return response()->json($event);
+    }
+
+  
 }
 
