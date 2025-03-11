@@ -41,5 +41,21 @@ class Event extends Model
         'is_featured' => 'boolean',
         'category' => 'string', 
     ];
+     /**
+     * Get the creator of the event.
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * Get the tickets for the event.
+     */
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
 
 }
